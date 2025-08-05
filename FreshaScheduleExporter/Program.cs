@@ -102,7 +102,7 @@ class Program
     {
         await page.WaitForSelectorAsync($"text='{reference}'", new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible });
         await page.ClickAsync($"text='{reference}'");
-        await page.WaitForTimeoutAsync(2000);
+        await page.WaitForTimeoutAsync(3000);
         var phoneNumberButton = await page.QuerySelectorAsync("button[data-qa='customer-contact-number']");
         var phoneNumber = phoneNumberButton != null ? await phoneNumberButton.InnerTextAsync() : "Not Found";
         await page.GoBackAsync();

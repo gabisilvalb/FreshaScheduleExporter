@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Mensagens de Agendamento</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 20px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }
+th { background-color: #f2f2f2; }
+tr:hover { background-color: #f9f9f9; }
+button { padding: 5px 8px; margin-left: 5px; cursor: pointer; border-radius: 4px; border: 1px solid #aaa; }
+a button { background-color: #25D366; color: white; font-weight: bold; border: none; }
+#copy-toast { position: fixed; bottom: 20px; right: 20px; background-color: #4CAF50; color: white; padding: 12px 18px; border-radius: 6px; font-size: 14px; z-index: 9999; display: none; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+</style>
+</head>
+<body>
+<h2>Mensagens de Lembrete de Agendamento</h2>
+<table>
+<tr><th>Nome</th><th>Número</th><th>Mensagem</th></tr>
+<tr>
+<td>Yara Silva</td>
+<td><span id="phone0">915618446</span><button onclick="copyToClipboard('phone0')">Copiar</button></td>
+<td><span id="msg0">Ol&#225; Yara Silva &#129293;<br>Lembrete: a tua marca&#231;&#227;o &#233; amanh&#227;, dia 03 de julho, &#224;s 11:45, para Design de Sobrancelha com a Yara.<br><br>Se precisares de fazer alguma altera&#231;&#227;o, &#233; s&#243; avisar. &#127800;<br><br>Com carinho,<br>&#119819;&#119842;&#119847;&#119838;&#119834; &#119826;&#119853;&#119854;&#119837;&#119842;&#119848;</span><button onclick="copyToClipboard('msg0')">Copiar</button><a href='https://web.whatsapp.com/send?phone=351915618446&text=Ol%C3%A1%20Yara%20Silva%20%F0%9F%A4%8D%0ALembrete%3A%20a%20tua%20marca%C3%A7%C3%A3o%20%C3%A9%20amanh%C3%A3%2C%20dia%2003%20de%20julho%2C%20%C3%A0s%2011%3A45%2C%20para%20Design%20de%20Sobrancelha%20com%20a%20Yara.%0A%0ASe%20precisares%20de%20fazer%20alguma%20altera%C3%A7%C3%A3o%2C%20%C3%A9%20s%C3%B3%20avisar.%20%F0%9F%8C%B8%0A%0ACom%20carinho%2C%0A%F0%9D%90%8B%F0%9D%90%A2%F0%9D%90%A7%F0%9D%90%9E%F0%9D%90%9A%20%F0%9D%90%92%F0%9D%90%AD%F0%9D%90%AE%F0%9D%90%9D%F0%9D%90%A2%F0%9D%90%A8' target='_blank' data-wa='true'><button>Enviar</button></a></td>
+</tr>
+</table>
+<div id="copy-toast">Copiado!</div>
+<script>
+function copyToClipboard(id) {
+  const temp = document.createElement('textarea');
+  temp.value = document.getElementById(id).innerText;
+  document.body.appendChild(temp);
+  temp.select();
+  document.execCommand('copy');
+  document.body.removeChild(temp);
+  const toast = document.getElementById('copy-toast');
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 2000);
+}
+</script>
+</body>
+</html>

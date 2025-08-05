@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Ignore CSV appointment files
+Appointments_*.csv
+
+# Ignore HTML appointment files
+HtmlAppointments_*.html
