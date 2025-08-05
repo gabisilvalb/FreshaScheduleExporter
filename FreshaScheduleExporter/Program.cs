@@ -24,7 +24,7 @@ class Program
             var tomorrow = DateTimeOffset.Now.AddDays(1).ToString("yyyy-MM-dd");
             //var outputHtmlPath = Path.Combine(Directory.GetCurrentDirectory(), $"C:\\Users\\gsgab\\source\\repos\\FreshaScheduleExporter\\HtmlAppontments_{tomorrow}.html");
             string baseDir = AppContext.BaseDirectory;
-            string outputHtmlPath = Path.Combine(baseDir, $"HtmlAppontments_{tomorrow}.html");
+            string outputHtmlPath = Path.Combine(baseDir, $"HtmlAppointments_{tomorrow}.html");
             ExportMessagesToHtml(exportPath, outputHtmlPath);
         }
         catch (Exception ex)
