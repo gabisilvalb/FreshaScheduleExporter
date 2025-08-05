@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	 <PlaywrightSkipBrowserDownloads>false</PlaywrightSkipBrowserDownloads>
+	 <IncludePlaywright>true</IncludePlaywright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CsvHelper" Version="33.0.1" />
+    <PackageReference Include="Microsoft.Playwright" Version="1.53.0" />
+  </ItemGroup>
+
+</Project>
