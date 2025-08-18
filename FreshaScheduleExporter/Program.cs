@@ -22,7 +22,6 @@ class Program
 
             // Step 2: Display table with pre-filled messages for manual copy
             var tomorrow = DateTimeOffset.Now.AddDays(1).ToString("yyyy-MM-dd");
-            //var outputHtmlPath = Path.Combine(Directory.GetCurrentDirectory(), $"C:\\Users\\gsgab\\source\\repos\\FreshaScheduleExporter\\HtmlAppontments_{tomorrow}.html");
             string baseDir = AppContext.BaseDirectory;
             string outputHtmlPath = Path.Combine(baseDir, $"HtmlAppointments_{tomorrow}.html");
             ExportMessagesToHtml(exportPath, outputHtmlPath);
@@ -57,7 +56,6 @@ class Program
 
         string baseDir = AppContext.BaseDirectory;
         var exportPath = Path.Combine(baseDir, $"Appointments_{tomorrow}.csv");
-        //var exportPath = Path.Combine(Directory.GetCurrentDirectory(), $"C:\\Users\\gsgab\\source\\repos\\FreshaScheduleExporter\\Appointments_{tomorrow}.csv");
 
         // Read original CSV content
         var lines = new List<string>();
@@ -111,13 +109,23 @@ class Program
 
     private static async Task EnsureLoggedInAsync(IPage page)
     {
-        await page.GotoAsync("https://partners.fresha.com/sales/appointments-list/");
-        await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await page.GotoAsync("https://partners.fresha.com/sales/appointments-list/", new PageGotoOptions
+        {
+            WaitUntil = WaitUntilState.DOMContentLoaded,
+            Timeout = 45_000
+        });
 
-        if (page.Url.Contains("/sign-in") || await page.Locator("form[action*='sign-in']").IsVisibleAsync())
+        await page.WaitForTimeoutAsync(2000);
+
+        await AcceptCookiesAsync(page);
+
+        if (page.Url.Contains("/sign-in") || await page.Locator("form[action*='sign-in']").IsVisibleAsync(new() { Timeout = 2_000 }))
         {
             Console.WriteLine("Logging in...");
             await LoginAsync(page);
+
+            // Save session (cookies + local storage)
+            await page.Context.StorageStateAsync(new() { Path = SessionFile });
         }
         else
         {
@@ -127,16 +135,14 @@ class Program
 
     private static async Task LoginAsync(IPage page)
     {
-        await page.GotoAsync("https://partners.fresha.com/users/sign-in");
+        await page.GotoAsync("https://partners.fresha.com/users/sign-in", new() { WaitUntil = WaitUntilState.DOMContentLoaded });
+        await AcceptCookiesAsync(page);
+
         await page.FillAsync("input[name='email']", "lineastudio.pt@gmail.com");
         await page.ClickAsync("button[data-qa='continue']");
-        await page.WaitForSelectorAsync("input[name='password']");
+        await page.ClickAsync("input[name='password']");
+        await page.Keyboard.TypeAsync("GatinhaMya2002", new KeyboardTypeOptions { Delay = 500 });
 
-        var password = "GatinhaMya2002";
-        foreach (char c in password)
-        {
-            await page.Keyboard.TypeAsync(c.ToString(), new KeyboardTypeOptions { Delay = 300 });
-        }
 
         await page.ClickAsync("button[data-qa='login']");
         await page.WaitForURLAsync(url => !url.Contains("sign-in"));
@@ -233,8 +239,8 @@ class Program
             string serviceText = string.Join(", ", services);
 
             string messageRaw = $"Olá {firstName} 🤍\n" +
-                                $"Lembrete: a tua marcação é amanhã, dia {date}, às {time}, para {serviceText} com a Yara.\n\n" +
-                                "Se precisares de fazer alguma alteração, é só avisar. 🌸\n\n" +
+                                $"Lembrete: a tua marcação é amanhã, dia {date}, às {time}h, para {serviceText} com a Yara.\n\n" +
+                                "Se precisares de fazer alguma alteração, é só avisar. 🌟\n\n" +
                                 "Com carinho,\n𝐋𝐢𝐧𝐞𝐚 𝐒𝐭𝐮𝐝𝐢𝐨";
 
             string messageHtml = WebUtility.HtmlEncode(messageRaw).Replace("\n", "<br>");
@@ -295,6 +301,62 @@ class Program
         catch (Exception ex)
         {
             Console.WriteLine($"⚠️ Não foi possível abrir o arquivo automaticamente: {ex.Message}");
+        }
+    }
+
+    public static async Task AcceptCookiesAsync(IPage page)
+    {
+        // Try a quick, bounded wait so we don't block if there's no banner
+        try { await page.WaitForTimeoutAsync(300); } catch { }
+
+        string[] selectors = new[]
+        {
+            // OneTrust
+            "#onetrust-accept-btn-handler",
+            "button#onetrust-accept-btn-handler",
+            // Cookiebot
+            "#CybotCookiebotDialogBodyLevelButtonAccept",
+            // TrustArc
+            "#truste-consent-button",
+            // Quantcast Choice / IAB TCF v2 patterns
+            "button:has-text('Accept all')",
+            "button:has-text('Accept All')",
+            "button[aria-label='Accept all']",
+            "button[mode='primary']:has-text('Accept')",
+            // Portuguese variants
+            "button:has-text('Aceitar tudo')",
+            "button:has-text('Aceitar todos')",
+            "button:has-text('Aceitar todos os cookies')",
+        };
+
+        // 1) Try on the main page
+        foreach (var sel in selectors)
+        {
+            var loc = page.Locator(sel);
+            if (await loc.IsVisibleAsync(new() { Timeout = 1_000 }))
+            {
+                try { await loc.ClickAsync(new() { Timeout = 5_000 }); return; } catch { }
+            }
+        }
+
+        // 2) Try in iframes (many CMPs render inside an iframe)
+        foreach (var frame in page.Frames)
+        {
+            foreach (var sel in selectors)
+            {
+                var loc = frame.Locator(sel);
+                if (await loc.IsVisibleAsync(new() { Timeout = 1_000 }))
+                {
+                    try { await loc.ClickAsync(new() { Timeout = 5_000 }); return; } catch { }
+                }
+            }
+        }
+
+        // 3) Fallback: click a generic "Agree"/"Consent" button if present
+        var generic = page.Locator("button:has-text('Agree'), button:has-text('Consent')");
+        if (await generic.IsVisibleAsync(new() { Timeout = 1_000 }))
+        {
+            try { await generic.ClickAsync(new() { Timeout = 5_000 }); } catch { }
         }
     }
 }
