@@ -190,7 +190,16 @@ class Program
             string rawPhone = phoneIndex >= 0 ? cols[phoneIndex] : "Sem número";
 
             string phone = new string(rawPhone.Where(char.IsDigit).ToArray());
-            if (phone.StartsWith("351")) phone = phone[3..];
+            string[] countryCodes = { "351", "1", "44", "49", "33", "41" }; // PT, US/CA, UK, DE, FR
+
+            foreach (var code in countryCodes)
+            {
+                if (phone.StartsWith(code))
+                {
+                    phone = phone.Substring(code.Length);
+                    break; // stop after first match
+                }
+            }
 
             string time = timeIndex >= 0 ? cols[timeIndex] : "hora indefinida";
             string date = dateIndex >= 0 ? DateTime.Parse(cols[dateIndex]).ToString("dd 'de' MMMM", new System.Globalization.CultureInfo("pt-PT")) : "data indefinida";
