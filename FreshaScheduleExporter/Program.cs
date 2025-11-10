@@ -73,7 +73,9 @@ class Program
             foreach (var line in lines)
             {
                 var columns = line.Split(',').Select(c => c.Trim().Trim('"')).ToArray();
-                int referenceIndex = Array.IndexOf(columns, "Referência");
+                int referenceIndex = Array.FindIndex(columns, c =>
+                        string.Equals(c, "Referência", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(c, "Ref #", StringComparison.OrdinalIgnoreCase));
 
                 if (isHeader && referenceIndex >= 0)
                 {
@@ -164,12 +166,30 @@ class Program
 
         var header = lines[0].Split(',');
 
-        int nameIndex = Array.FindIndex(header, h => h.Contains("Cliente", StringComparison.OrdinalIgnoreCase));
-        int phoneIndex = Array.FindIndex(header, h => h.Contains("PhoneNumber", StringComparison.OrdinalIgnoreCase));
-        int timeIndex = Array.FindIndex(header, h => h.Contains("Horário", StringComparison.OrdinalIgnoreCase));
-        int dateIndex = Array.FindIndex(header, h => h.Contains("Data agendada", StringComparison.OrdinalIgnoreCase));
-        int serviceIndex = Array.FindIndex(header, h => h.Contains("Serviço", StringComparison.OrdinalIgnoreCase));
-        int statusIndex = Array.FindIndex(header, h => h.Contains("Situação", StringComparison.OrdinalIgnoreCase));
+        int nameIndex = Array.FindIndex(header, h =>
+                h.Contains("Cliente", StringComparison.OrdinalIgnoreCase) ||
+                h.Contains("Client", StringComparison.OrdinalIgnoreCase));
+
+        int phoneIndex = Array.FindIndex(header, h =>
+            h.Contains("PhoneNumber", StringComparison.OrdinalIgnoreCase) ||
+            h.Contains("Telefone", StringComparison.OrdinalIgnoreCase));
+
+        int timeIndex = Array.FindIndex(header, h =>
+            h.Contains("Horário", StringComparison.OrdinalIgnoreCase) ||
+            h.Contains("Time", StringComparison.OrdinalIgnoreCase));
+
+        int dateIndex = Array.FindIndex(header, h =>
+            h.Contains("Data agendada", StringComparison.OrdinalIgnoreCase) ||
+            h.Contains("Scheduled Date", StringComparison.OrdinalIgnoreCase) ||
+            h.Contains("Date", StringComparison.OrdinalIgnoreCase));
+
+        int serviceIndex = Array.FindIndex(header, h =>
+            h.Contains("Serviço", StringComparison.OrdinalIgnoreCase) ||
+            h.Contains("Service", StringComparison.OrdinalIgnoreCase));
+
+        int statusIndex = Array.FindIndex(header, h =>
+            h.Contains("Situação", StringComparison.OrdinalIgnoreCase) ||
+            h.Contains("Status", StringComparison.OrdinalIgnoreCase));
 
         var grouped = new Dictionary<string, List<(string Name, string FirstName, string Time, string Date, string Service)>>();
 
@@ -179,18 +199,22 @@ class Program
             if (cols.Length <= Math.Max(Math.Max(nameIndex, phoneIndex), timeIndex)) continue;
 
             if (statusIndex >= 0 && cols.Length > statusIndex &&
-                cols[statusIndex].Trim().Equals("Cancelado", StringComparison.OrdinalIgnoreCase))
+                cols[statusIndex].Trim().Equals("Cancelado", StringComparison.OrdinalIgnoreCase) || cols[statusIndex].Trim().Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
             var debug = cols[nameIndex];
 
-            string name = nameIndex >= 0 ? cols[nameIndex] : "Cliente";
-            string firstName = nameIndex >= 0 ? cols[nameIndex].Trim(' ').Split(' ')[0] : "Cliente";
-            string rawPhone = phoneIndex >= 0 ? cols[phoneIndex] : "Sem número";
+            string nameFallback = "Cliente / Client";
+            string name = nameIndex >= 0 ? cols[nameIndex] : nameFallback;
+            string firstName = nameIndex >= 0
+                ? cols[nameIndex].Trim().Split(' ')[0]
+                : nameFallback;
+
+            string rawPhone = phoneIndex >= 0 ? cols[phoneIndex] : "Sem número / No number";
 
             string phone = new string(rawPhone.Where(char.IsDigit).ToArray());
-            string[] countryCodes = { "351", "1", "44", "49", "33", "41" }; // PT, US/CA, UK, DE, FR
+            string[] countryCodes = { "351", "1", "44", "49", "33", "41" };
 
             foreach (var code in countryCodes)
             {

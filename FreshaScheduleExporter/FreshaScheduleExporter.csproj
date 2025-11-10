@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="CsvHelper" Version="33.0.1" />
-    <PackageReference Include="Microsoft.Playwright" Version="1.53.0" />
+    <PackageReference Include="Microsoft.Playwright" Version="1.55.0" />
   </ItemGroup>
 
 </Project>
