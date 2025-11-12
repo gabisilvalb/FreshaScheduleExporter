@@ -6,9 +6,8 @@ using Microsoft.Playwright;
 class Program
 {
     private static readonly string SessionFile = Path.Combine(AppContext.BaseDirectory, "fresha_session.json");
-    //private const string WhatsAppApiUrl = "https://graph.facebook.com/v17.0/";
-    //private const string WhatsAppPhoneNumberId = "YOUR_WHATSAPP_PHONE_NUMBER_ID"; // Replace with your phone number ID
-    //private const string WhatsAppToken = "YOUR_WHATSAPP_ACCESS_TOKEN"; // Replace with your access token
+    private static readonly string WhatsAppProfileDir = Path.Combine(AppContext.BaseDirectory, "whatsapp_profile");
+    private static readonly Random _rand = new Random();
 
     static async Task Main(string[] args)
     {
@@ -21,10 +20,13 @@ class Program
             Console.WriteLine($"Exported report to: {exportPath}");
 
             // Step 2: Display table with pre-filled messages for manual copy
-            var tomorrow = DateTimeOffset.Now.AddDays(1).ToString("yyyy-MM-dd");
+            var tomorrow = "2025-11-14"; //DateTimeOffset.Now.AddDays(1).ToString("yyyy-MM-dd");
             string baseDir = AppContext.BaseDirectory;
             string outputHtmlPath = Path.Combine(baseDir, $"HtmlAppointments_{tomorrow}.html");
             ExportMessagesToHtml(exportPath, outputHtmlPath);
+            
+            // Step 3: Send automatic messages
+            await SendAutomaticMessages(exportPath);
         }
         catch (Exception ex)
         {
@@ -41,8 +43,9 @@ class Program
         var page = await context.NewPageAsync();
         await EnsureLoggedInAsync(page);
 
-        var tomorrow = DateTimeOffset.Now.AddDays(1).ToString("yyyy-MM-dd");
-        await page.GotoAsync($"https://partners.fresha.com/sales/appointments-list/?report-date-from={tomorrow}&report-date-to={tomorrow}&report-shortcut=tomorrow");
+        var tomorrow = DateTimeOffset.Now.AddDays(3).ToString("yyyy-MM-dd");
+        // await page.GotoAsync($"https://partners.fresha.com/sales/appointments-list/?report-date-from={tomorrow}&report-date-to={tomorrow}&report-shortcut=tomorrow");
+        await page.GotoAsync($"https://partners.fresha.com/sales/appointments-list/?report-date-from=2025-11-14&report-date-to=2025-11-14&report-limit=100&report-offset=0&report-sort-by=scheduled-on&report-sort-order=desc&report-shortcut=custom");
         await page.WaitForTimeoutAsync(2000);
 
         Console.WriteLine("Exporting report...");
@@ -312,8 +315,128 @@ class Program
         Console.WriteLine($"✅ HTML com mensagens agrupadas gerado em: {outputHtmlPath}");
         OpenFileInDefaultApp(outputHtmlPath);
     }
+    
+private static async Task SendAutomaticMessages(string csvPath)
+{
+    if (!File.Exists(csvPath))
+    {
+        Console.WriteLine("❌ Ficheiro CSV não encontrado.");
+        return;
+    }
 
+    var lines = File.ReadAllLines(csvPath);
+    if (lines.Length < 2)
+    {
+        Console.WriteLine("❌ CSV está vazio.");
+        return;
+    }
 
+    var header = lines[0].Split(',');
+    int nameIndex = Array.FindIndex(header, h =>
+        h.Contains("Cliente", StringComparison.OrdinalIgnoreCase) ||
+        h.Contains("Client", StringComparison.OrdinalIgnoreCase));
+
+    int phoneIndex = Array.FindIndex(header, h =>
+        h.Contains("PhoneNumber", StringComparison.OrdinalIgnoreCase) ||
+        h.Contains("Telefone", StringComparison.OrdinalIgnoreCase));
+
+    int timeIndex = Array.FindIndex(header, h =>
+        h.Contains("Horário", StringComparison.OrdinalIgnoreCase) ||
+        h.Contains("Time", StringComparison.OrdinalIgnoreCase));
+
+    int dateIndex = Array.FindIndex(header, h =>
+        h.Contains("Data agendada", StringComparison.OrdinalIgnoreCase) ||
+        h.Contains("Scheduled Date", StringComparison.OrdinalIgnoreCase) ||
+        h.Contains("Date", StringComparison.OrdinalIgnoreCase));
+
+    int serviceIndex = Array.FindIndex(header, h =>
+        h.Contains("Serviço", StringComparison.OrdinalIgnoreCase) ||
+        h.Contains("Service", StringComparison.OrdinalIgnoreCase));
+
+    Console.WriteLine("🔄 A preparar envio automático via WhatsApp Web...");
+
+    using var playwright = await Playwright.CreateAsync();
+
+    // Chromium com perfil persistente
+    var browser = await playwright.Chromium.LaunchPersistentContextAsync(
+        WhatsAppProfileDir,
+        new BrowserTypeLaunchPersistentContextOptions
+        {
+            Headless = false,
+            Args = new[] { "--start-maximized" }
+        }
+    );
+
+    var page = browser.Pages.FirstOrDefault() ?? await browser.NewPageAsync();
+
+    // Vai para WhatsApp Web e espera carregar
+    await page.GotoAsync("https://web.whatsapp.com/");
+    try
+    {
+        // Espera por até 120s até o QR ser lido ou a sessão restaurada
+        await page.WaitForSelectorAsync("div[role='textbox']", new() { Timeout = 120_000 });
+        Console.WriteLine("✅ WhatsApp Web pronto.");
+    }
+    catch
+    {
+        Console.WriteLine("❌ Tempo esgotado para WhatsApp Web. Verifica o QR ou a sessão.");
+        return;
+    }
+
+    // Enviar mensagens
+    for (int i = 1; i < lines.Length; i++)
+    {
+        var cols = lines[i].Split(',').Select(c => c.Trim('"')).ToArray();
+        if (cols.Length <= Math.Max(nameIndex, phoneIndex)) continue;
+
+        string name = nameIndex >= 0 ? cols[nameIndex] : "Cliente";
+        string firstName = name.Split(' ')[0];
+        string phone = new string(cols[phoneIndex].Where(char.IsDigit).ToArray());
+
+        if (string.IsNullOrWhiteSpace(phone))
+            continue;
+
+        string date = dateIndex >= 0 ? cols[dateIndex] : "";
+        string time = timeIndex >= 0 ? cols[timeIndex] : "";
+        string service = serviceIndex >= 0 ? cols[serviceIndex] : "";
+
+        string message = $"Olá {firstName} 🤍\n" +
+                         $"Lembrete: a tua marcação é amanhã, dia {date}, às {time}h, para {service} com a Yara.\n\n" +
+                         "Se precisares de fazer alguma alteração, é só avisar. 🌟\n\n" +
+                         "Com carinho,\n𝐋𝐢𝐧𝐞𝐚 𝐒𝐭𝐮𝐝𝐢𝐨";
+
+        string encoded = Uri.EscapeDataString(message);
+        string waUrl = $"https://web.whatsapp.com/send?phone={phone}&text={encoded}";
+
+        Console.WriteLine($"💬 A enviar para {firstName} ({phone})...");
+
+        try
+        {
+            // Tempo aleatório antes de abrir conversa
+            await Task.Delay(_rand.Next(4000, 9000));
+
+            await page.GotoAsync(waUrl);
+            await page.WaitForSelectorAsync("div[role='textbox']", new() { Timeout = 20000 });
+
+            // Tempo aleatório antes de enviar
+            await Task.Delay(_rand.Next(3000, 7000));
+
+            await page.Keyboard.PressAsync("Enter");
+            Console.WriteLine($"✅ Mensagem enviada para {firstName}");
+
+            // Espera aleatória entre mensagens
+            await Task.Delay(_rand.Next(20000, 45000));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Erro ao enviar para {firstName}: {ex.Message}");
+        }
+    }
+
+    await browser.CloseAsync();
+    Console.WriteLine("🎉 Todas as mensagens foram enviadas!");
+}
+       
     public static void OpenFileInDefaultApp(string filePath)
     {
         try
