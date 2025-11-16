@@ -180,8 +180,7 @@ class Program
 
         int dateIndex = Array.FindIndex(header, h =>
             h.Contains("Data agendada", StringComparison.OrdinalIgnoreCase) ||
-            h.Contains("Scheduled Date", StringComparison.OrdinalIgnoreCase) ||
-            h.Contains("Date", StringComparison.OrdinalIgnoreCase));
+            h.Contains("Scheduled on", StringComparison.OrdinalIgnoreCase));
 
         int serviceIndex = Array.FindIndex(header, h =>
             h.Contains("Serviço", StringComparison.OrdinalIgnoreCase) ||
@@ -273,6 +272,7 @@ class Program
 
             string messageRaw = $"Olá {firstName} 🤍\n" +
                                 $"Lembrete: a tua marcação é amanhã, dia {date}, às {time}h, para {serviceText} com a Yara.\n\n" +
+                                "Peço para quando chegares à porta mandar mensagem por aqui por favor. É numa casa a meio da rua e é do lado esquerdo de um terreno vazio.\n\n" +
                                 "Se precisares de fazer alguma alteração, é só avisar. 🌟\n\n" +
                                 "Com carinho,\n𝐋𝐢𝐧𝐞𝐚 𝐒𝐭𝐮𝐝𝐢𝐨";
 
