@@ -40,7 +40,8 @@ class Program
 
         var page = await context.NewPageAsync();
         await EnsureLoggedInAsync(page);
-
+        await page.WaitForTimeoutAsync(2000);
+        
         var tomorrow = DateTimeOffset.Now.AddDays(1).ToString("yyyy-MM-dd");
         await page.GotoAsync($"https://partners.fresha.com/sales/appointments-list/?report-date-from={tomorrow}&report-date-to={tomorrow}&report-shortcut=tomorrow");
         await page.WaitForTimeoutAsync(2000);
@@ -75,7 +76,8 @@ class Program
                 var columns = line.Split(',').Select(c => c.Trim().Trim('"')).ToArray();
                 int referenceIndex = Array.FindIndex(columns, c =>
                         string.Equals(c, "Referência", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(c, "Ref #", StringComparison.OrdinalIgnoreCase));
+                        string.Equals(c, "Ref #", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(c, "N.º de ref", StringComparison.OrdinalIgnoreCase));
 
                 if (isHeader && referenceIndex >= 0)
                 {
@@ -120,7 +122,7 @@ class Program
         await page.WaitForTimeoutAsync(2000);
 
         await AcceptCookiesAsync(page);
-
+        
         if (page.Url.Contains("/sign-in") || await page.Locator("form[action*='sign-in']").IsVisibleAsync(new() { Timeout = 2_000 }))
         {
             Console.WriteLine("Logging in...");
@@ -176,7 +178,8 @@ class Program
 
         int timeIndex = Array.FindIndex(header, h =>
             h.Contains("Horário", StringComparison.OrdinalIgnoreCase) ||
-            h.Contains("Time", StringComparison.OrdinalIgnoreCase));
+            h.Contains("Time", StringComparison.OrdinalIgnoreCase) ||
+            h.Contains("Hora", StringComparison.OrdinalIgnoreCase));
 
         int dateIndex = Array.FindIndex(header, h =>
             h.Contains("Data agendada", StringComparison.OrdinalIgnoreCase) ||
@@ -188,7 +191,8 @@ class Program
 
         int statusIndex = Array.FindIndex(header, h =>
             h.Contains("Situação", StringComparison.OrdinalIgnoreCase) ||
-            h.Contains("Status", StringComparison.OrdinalIgnoreCase));
+            h.Contains("Status", StringComparison.OrdinalIgnoreCase) ||
+            h.Contains("Estado", StringComparison.OrdinalIgnoreCase));
 
         var grouped = new Dictionary<string, List<(string Name, string FirstName, string Time, string Date, string Service)>>();
 
@@ -198,7 +202,8 @@ class Program
             if (cols.Length <= Math.Max(Math.Max(nameIndex, phoneIndex), timeIndex)) continue;
 
             if (statusIndex >= 0 && cols.Length > statusIndex &&
-                cols[statusIndex].Trim().Equals("Cancelado", StringComparison.OrdinalIgnoreCase) || cols[statusIndex].Trim().Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
+                cols[statusIndex].Trim().Equals("Cancelado", StringComparison.OrdinalIgnoreCase) || cols[statusIndex].Trim().Equals("Canceled", StringComparison.OrdinalIgnoreCase) ||
+                cols[statusIndex].Trim().Equals("Cancelada", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -272,8 +277,8 @@ class Program
 
             string messageRaw = $"Olá {firstName} 🤍\n" +
                                 $"Lembrete: a tua marcação é amanhã, dia {date}, às {time}h, para {serviceText} com a Yara.\n\n" +
-                                "Peço para quando chegares à porta mandar mensagem por aqui por favor. É numa casa a meio da rua e é do lado esquerdo de um terreno vazio.\n\n" +
-                                "Se precisares de fazer alguma alteração, é só avisar. 🌟\n\n" +
+                                "Peço para quando chegares à porta mandar mensagem por aqui por favor.\n\n" +
+                                "É uma casa à frente da Escola Marquês de Pombal (estrada só de um sentido), com portões verdes e é do lado esquerdo de um terreno vazio. \n\n" +
                                 "Com carinho,\n𝐋𝐢𝐧𝐞𝐚 𝐒𝐭𝐮𝐝𝐢𝐨";
 
             string messageHtml = WebUtility.HtmlEncode(messageRaw).Replace("\n", "<br>");
@@ -321,6 +326,7 @@ class Program
             if (OperatingSystem.IsWindows())
             {
                 Process.Start(new ProcessStartInfo("cmd", $"/c start \"\" \"{filePath}\"") { CreateNoWindow = true });
+                File.Delete(filePath);
             }
             else if (OperatingSystem.IsMacOS())
             {
